@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Personal Hub</title>
+<style>
+:root{--bg:#0f172a;--card:#1e293b;--line:#334155;--txt:#e2e8f0;--mut:#94a3b8;--acc:#2563eb}
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,sans-serif;
+background:var(--bg);color:var(--txt);min-height:100vh}
+header{position:sticky;top:0;background:#0b1220;border-bottom:1px solid var(--line);
+padding:10px 14px;z-index:10}
+header h1{margin:0;font-size:18px}
+nav{display:flex;gap:6px;margin-top:8px}
+nav button{flex:1;padding:10px;border:1px solid var(--line);background:var(--card);
+color:var(--txt);border-radius:10px;font-size:15px;cursor:pointer}
+nav button.on{background:var(--acc);border-color:var(--acc)}
+main{max-width:900px;margin:0 auto;padding:12px 12px 90px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;
+padding:12px;margin-bottom:10px}
+.chips{display:flex;gap:8px;overflow-x:auto;padding:4px 0 10px}
+.chip{white-space:nowrap;padding:8px 14px;border-radius:20px;border:1px solid var(--line);
+background:var(--card);color:var(--txt);cursor:pointer;font-size:14px}
+.chip.on{background:var(--acc);border-color:var(--acc)}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px}
+.msg{border-left:4px solid var(--line);padding:10px 12px;cursor:pointer}
+.msg.unread .subj{font-weight:700}
+.msg .from{font-size:14px}.msg .subj{font-size:15px;margin:2px 0}
+.msg .snip{color:var(--mut);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.msg .meta{color:var(--mut);font-size:12px;display:flex;justify-content:space-between}
+.row{display:flex;gap:8px;align-items:center}
+input,textarea,select{width:100%;padding:10px;margin:6px 0;border-radius:8px;
+border:1px solid var(--line);background:#0b1220;color:var(--txt);font-size:15px}
+textarea{min-height:120px;resize:vertical}
+button.act{background:var(--acc);border:0;color:#fff;border-radius:8px;
+padding:10px 14px;font-size:15px;cursor:pointer}
+button.ghost{background:transparent;border:1px solid var(--line);color:var(--txt);
+border-radius:8px;padding:10px 14px;font-size:15px;cursor:pointer}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+.body{line-height:1.55;font-size:15px;overflow-wrap:anywhere}
+.body img{max-width:100%}
+.fab{position:fixed;bottom:20px;right:20px;width:60px;height:60px;border-radius:50%;
+background:var(--acc);color:#fff;font-size:28px;border:0;cursor:pointer;z-index:20}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;
+align-items:flex-end;justify-content:center;z-index:30}
+.sheet{background:var(--card);width:100%;max-width:640px;max-height:92vh;overflow:auto;
+border-radius:16px 16px 0 0;padding:16px}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.cal-grid .dow{color:var(--mut);font-size:12px;text-align:center;padding:4px}
+.cal-grid .day{background:var(--card);border:1px solid var(--line);border-radius:8px;
+min-height:64px;padding:4px;font-size:13px;cursor:pointer}
+.cal-grid .day.dim{opacity:.35}.cal-grid .day.today{border-color:var(--acc)}
+.ev{font-size:11px;border-radius:4px;padding:1px 4px;margin:1px 0;color:#fff;
+white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.evlist{margin:4px 0;font-size:14px}.evlist .t{color:var(--mut);font-size:12px}
+.jentry{cursor:pointer}.jentry h3{margin:4px 0}.jentry .d{color:var(--mut);font-size:13px}
+.tag{display:inline-block;background:#0b1220;border:1px solid var(--line);
+border-radius:12px;padding:2px 10px;font-size:12px;margin:2px 4px 2px 0}
+.toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);
+background:#1e293b;border:1px solid var(--line);padding:10px 18px;border-radius:10px;z-index:50}
+.hidden{display:none!important}
+.sumbox{background:#0b1220;border:1px solid var(--line);border-radius:8px;
+padding:10px;margin:10px 0;font-size:14px;line-height:1.5;white-space:pre-wrap}
+.acct{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
+.acct:last-child{border-bottom:0}
+.help{color:var(--mut);font-size:13px;line-height:1.6}
+.help ol{padding-left:20px}.help li{margin:6px 0}
+</style></head><body>
+<header><h1>Personal Hub</h1>
+<nav>
+<button data-tab="mail" class="on">Mail</button>
+<button data-tab="calendar">Calendar</button>
+<button data-tab="journal">Journal</button>
+<button data-tab="accounts">Accounts</button>
+</nav></header>
+<main>
+<section id="tab-mail">
+  <div class="chips" id="acctChips"></div>
+  <div class="row"><input id="q" placeholder="Search mail…  (e.g. from:bank subject:invoice)">
+  <button class="act" onclick="loadMail(true)">Go</button></div>
+  <div id="maillist"></div>
+  <div class="row" style="justify-content:center"><button class="ghost hidden" id="moreBtn" onclick="loadMail(false)">Load more</button></div>
+</section>
+<section id="tab-calendar" class="hidden">
+  <div class="row" style="justify-content:space-between">
+    <button class="ghost" onclick="calMove(-1)">‹</button>
+    <h2 id="calTitle" style="margin:0"></h2>
+    <button class="ghost" onclick="calMove(1)">›</button>
+  </div>
+  <div class="cal-grid" id="calGrid" style="margin-top:8px"></div>
+  <div id="dayEvents" style="margin-top:10px"></div>
+  <button class="act" style="margin-top:8px" onclick="openEventForm()">+ New event</button>
+</section>
+<section id="tab-journal" class="hidden">
+  <button class="act" onclick="openJournalForm()">+ New entry</button>
+  <button class="ghost" onclick="journalPrompt()" style="margin-left:8px">✨ Daily prompt</button>
+  <div id="promptBox" class="sumbox hidden"></div>
+  <div id="journalList" style="margin-top:10px"></div>
+</section>
+<section id="tab-accounts" class="hidden">
+  <div class="card"><h3 style="margin-top:0">Connected accounts</h3><div id="acctList"></div>
+  <button class="act" style="margin-top:10px" onclick="connectGmail()">+ Connect a Gmail account</button></div>
+  <div class="card"><h3 style="margin-top:0">Outlook / Hotmail accounts</h3>
+  <div class="help"><p>No Azure setup needed — forward them into Gmail instead:</p>
+  <ol><li>Open <b>outlook.com</b>, sign into the Hotmail account → ⚙ Settings → <b>Mail → Forwarding</b></li>
+  <li>Turn on <b>Enable forwarding</b>, enter your Gmail address, save. Tick "keep a copy" if you like.</li>
+  <li>Mail now lands in Gmail — and in this hub. To reply <i>as</i> the Hotmail address: in Gmail → Settings → Accounts → "Send mail as" → add the address.</li></ol></div></div>
+  <div class="card"><button class="ghost" onclick="logout()">Sign out of hub</button></div>
+</section>
+</main>
+<button class="fab hidden" id="composeFab" onclick="openCompose()">✎</button>
+<div id="modal" class="modal hidden"><div class="sheet" id="sheet"></div></div>
+<div id="toast" class="toast hidden"></div>
+<script>
+"use strict";
+let accounts=[], mailView="all", nextTokens={}, openMsg=null, openAcct=null;
+let calCursor=new Date(); calCursor.setDate(1);
+let journalEntries=[], pendingLinks=[];
+const $=id=>document.getElementById(id);
+function toast(m){const t=$("toast");t.textContent=m;t.classList.remove("hidden");
+setTimeout(()=>t.classList.add("hidden"),2500);}
+async function api(path,opt={}){const r=await fetch(path,Object.assign(
+{headers:{"Content-Type":"application/json"}},opt));
+if(r.status===401){location.href="/";return{__auth:false};}
+const d=await r.json().catch(()=>({}));return d;}
+function esc(s){return String(s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
+function fmtDate(iso){try{const d=new Date(iso);const now=new Date();
+if(d.toDateString()===now.toDateString())return d.toLocaleTimeString([],{hour:"numeric",minute:"2-digit"});
+return d.toLocaleDateString([],{month:"short",day:"numeric"});}catch(e){return"";}}
+// ---- tabs
+document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>{
+document.querySelectorAll("nav button").forEach(x=>x.classList.remove("on"));
+b.classList.add("on");
+["mail","calendar","journal","accounts"].forEach(t=>$("tab-"+t).classList.toggle("hidden",t!==b.dataset.tab));
+$("composeFab").classList.toggle("hidden",b.dataset.tab!=="mail");
+if(b.dataset.tab==="calendar")renderCal();
+if(b.dataset.tab==="journal")loadJournal();
+if(b.dataset.tab==="accounts")loadAccounts();
+if(location.hash==="#accounts"&&b.dataset.tab!=="accounts")history.replaceState(null,""," ");
+});
+function goTab(t){document.querySelector(`nav button[data-tab="${t}"]`).click();}
+// ---- accounts
+async function loadAccounts(){
+const d=await api("/api/accounts");if(d.__auth===false)return;
+accounts=d.accounts||[];
+const chips=$("acctChips");chips.innerHTML="";
+const mk=(id,label,color)=>{const b=document.createElement("button");
+b.className="chip"+((String(mailView)===String(id))?" on":"");
+b.innerHTML=(color?`<span class="dot" style="background:${color}"></span>`:"")+esc(label);
+b.onclick=()=>{mailView=id;loadMail(true);loadAccounts();};chips.appendChild(b);};
+mk("all","All inboxes",null);
+accounts.forEach(a=>mk(a.id,a.email,a.color));
+const list=$("acctList");list.innerHTML=accounts.length?"":"<p class='help'>No accounts yet.</p>";
+accounts.forEach(a=>{const div=document.createElement("div");div.className="acct";
+div.innerHTML=`<span class="dot" style="background:${a.color}"></span><span style="flex:1">${esc(a.email)}</span>
+<button class="ghost" data-id="${a.id}">Remove</button>`;list.appendChild(div);});
+list.querySelectorAll("button").forEach(b=>b.onclick=async()=>{
+if(!confirm("Remove this account from the hub? (Nothing is deleted from Gmail.)"))return;
+await api("/api/accounts/"+b.dataset.id,{method:"DELETE"});loadAccounts();if(mailView!=="all")mailView="all";});
+}
+async function connectGmail(){
+const d=await api("/api/oauth/url");if(d.__auth===false)return;
+if(d.error){toast(d.error);return;}location.href=d.url;}
+async function logout(){await api("/api/logout",{method:"POST"});location.href="/";}
+// ---- mail
+async function loadMail(reset){
+if(reset){nextTokens={};$("maillist").innerHTML="";}
+const q=$("q").value.trim()||"in:inbox";
+const d=await api(`/api/mail?view=${encodeURIComponent(mailView)}&q=${encodeURIComponent(q)}&tokens=${encodeURIComponent(JSON.stringify(nextTokens))}`);
+if(d.__auth===false)return;
+if(d.error){toast(d.error);return;}
+nextTokens=d.nextTokens||{};
+const list=$("maillist");
+d.messages.forEach(m=>{const div=document.createElement("div");
+div.className="card msg"+(m.unread?" unread":"");
+div.style.borderLeftColor=m.color;
+div.innerHTML=`<div class="meta"><span>${esc(m.from.name)}</span><span>${fmtDate(m.date)}</span></div>
+<div class="subj">${esc(m.subject)}</div><div class="snip">${esc(m.snippet)}</div>`;
+div.onclick=()=>openMessage(m);list.appendChild(div);});
+$("moreBtn").classList.toggle("hidden",!Object.keys(nextTokens).length);
+}
+async function openMessage(m){
+const d=await api(`/api/mail/${m.account_id}/${m.id}`);
+if(d.__auth===false||d.error){toast(d.error||"Could not open");return;}
+openMsg=d;openAcct=m;
+showSheet(`<div class="meta" style="color:var(--mut);font-size:13px">
+<span class="dot" style="background:${m.color}"></span>${esc(m.account_email)}</div>
+<h2 style="margin:6px 0">${esc(d.subject)}</h2>
+<div style="color:var(--mut);font-size:13px">${esc(d.from.name)} &lt;${esc(d.from.email)}&gt;<br>${esc(d.date)}</div>
+<div class="actions">
+<button class="act" onclick="openCompose('re')">Reply</button>
+<button class="ghost" onclick="openCompose('fwd')">Forward</button>
+<button class="ghost" onclick="msgAct('archive')">Archive</button>
+<button class="ghost" onclick="msgAct('trash')">Delete</button>
+<button class="ghost" onclick="msgAct('read',${d.unread})">${d.unread?"Mark read":"Mark unread"}</button>
+</div>
+<div class="actions">
+<button class="ghost" onclick="summarize()">✨ Summarize</button>
+<button class="ghost" onclick="prefillEvent()">📅 Add to calendar</button>
+<button class="ghost" onclick="linkJournal()">📝 Journal about this</button>
+</div>
+<div id="sumBox"></div>
+<hr style="border-color:var(--line)"><div class="body">${d.body_html}</div>
+<div class="actions" style="margin-top:16px"><button class="ghost" onclick="closeSheet()">Close</button></div>`);
+if(d.unread)api(`/api/mail/${m.account_id}/${m.id}/read`,{method:"POST",body:JSON.stringify({read:true})}).then(()=>loadMail(true));
+}
+async function msgAct(act,arg){
+const d=await api(`/api/mail/${openAcct.account_id}/${openMsg.id}/${act}`,
+{method:"POST",body:JSON.stringify(act==="read"?{read:!!arg}:{})});
+closeSheet();loadMail(true);toast("Done");}
+async function summarize(){
+$("sumBox").innerHTML="<p class='help'>Summarizing…</p>";
+const d=await api(`/api/mail/${openAcct.account_id}/${openMsg.id}/summarize`,{method:"POST"});
+$("sumBox").innerHTML=d.summary?`<div class="sumbox">${esc(d.summary)}</div>`:`<p class="help">${esc(d.error||"Failed")}</p>`;}
+function prefillEvent(){closeSheet();goTab("calendar");openEventForm(openMsg.subject);}
+function linkJournal(){const ref={account_id:openAcct.account_id,id:openMsg.id,
+subject:openMsg.subject,from:openMsg.from.email};closeSheet();goTab("journal");openJournalForm([ref]);}
+// ---- compose
+function openCompose(mode){
+let to="",subj="",body="";
+if(mode==="re"&&openMsg){to=openMsg.from.email;subj="Re: "+openMsg.subject;
+body=`\n\n— On ${openMsg.date}, ${openMsg.from.name} wrote: —\n`+openMsg.body_text.split("\n").map(l=>"> "+l).join("\n");}
+if(mode==="fwd"&&openMsg){subj="Fwd: "+openMsg.subject;
+body=`\n\n— Forwarded message —\nFrom: ${openMsg.from.name} <${openMsg.from.email}>\nSubject: ${openMsg.subject}\n\n`+openMsg.body_text;}
+const opts=accounts.map(a=>`<option value="${a.id}">${esc(a.email)}</option>`).join("");
+showSheet(`<h2>${mode==="re"?"Reply":mode==="fwd"?"Forward":"New message"}</h2>
+<label class="help">From</label><select id="cFrom">${opts}</select>
+<label class="help">To</label><input id="cTo" value="${esc(to)}">
+<label class="help">Subject</label><input id="cSubj" value="${esc(subj)}">
+<textarea id="cBody" style="min-height:200px">${esc(body)}</textarea>
+<div class="actions"><button class="act" onclick="sendMail()">Send</button>
+<button class="ghost" onclick="closeSheet()">Cancel</button></div>`);
+if(openAcct)$("cFrom").value=openAcct.account_id;}
+async function sendMail(){
+const d=await api("/api/mail/send",{method:"POST",body:JSON.stringify({
+account_id:parseInt($("cFrom").value),to:$("cTo").value,subject:$("cSubj").value,body:$("cBody").value})});
+if(d.ok){closeSheet();toast("Sent");}else toast(d.error||"Send failed");}
+// ---- modal
+function showSheet(html){$("sheet").innerHTML=html;$("modal").classList.remove("hidden");}
+function closeSheet(){$("modal").classList.add("hidden");$("sheet").innerHTML="";}
+$("modal").addEventListener("click",e=>{if(e.target.id==="modal")closeSheet();});
+// ---- calendar
+let calEvents=[];
+async function renderCal(){
+const y=calCursor.getFullYear(),mo=calCursor.getMonth();
+$("calTitle").textContent=calCursor.toLocaleDateString([],{month:"long",year:"numeric"});
+const from=new Date(y,mo,1).toISOString(),to=new Date(y,mo+1,1).toISOString();
+const d=await api(`/api/calendar?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`);
+if(d.__auth===false)return;calEvents=d.events||[];
+const grid=$("calGrid");grid.innerHTML="";
+["S","M","T","W","T","F","S"].forEach(x=>{const c=document.createElement("div");
+c.className="dow";c.textContent=x;grid.appendChild(c);});
+const first=new Date(y,mo,1).getDay(),days=new Date(y,mo+1,0).getDate();
+for(let i=0;i<first;i++){const c=document.createElement("div");c.className="day dim";grid.appendChild(c);}
+const today=new Date();
+for(let day=1;day<=days;day++){const c=document.createElement("div");
+c.className="day"+((day===today.getDate()&&mo===today.getMonth()&&y===today.getFullYear())?" today":"");
+const ds=`${y}-${String(mo+1).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
+const evs=calEvents.filter(e=>e.start.slice(0,10)===ds);
+c.innerHTML=`<b>${day}</b>`+evs.slice(0,3).map(e=>
+`<div class="ev" style="background:${e.color}">${esc(e.title)}</div>`).join("")+
+(evs.length>3?`<div style="font-size:10px;color:var(--mut)">+${evs.length-3} more</div>`:"");
+c.onclick=()=>showDay(ds,evs);grid.appendChild(c);}
+}
+function calMove(n){calCursor.setMonth(calCursor.getMonth()+n);renderCal();}
+function showDay(ds,evs){
+$("dayEvents").innerHTML=`<div class="card"><h3 style="margin:0 0 8px">${ds}</h3>`+
+(evs.length?evs.map(e=>`<div class="evlist"><span class="dot" style="background:${e.color}"></span>
+<b>${esc(e.title)}</b><div class="t">${esc(e.start.slice(11,16))}${e.end?" – "+esc(e.end.slice(11,16)):""}${e.location?" · "+esc(e.location):""}</div></div>`).join("")
+:"<p class='help'>Nothing scheduled.</p>")+"</div>";
+$("dayEvents").scrollIntoView({behavior:"smooth",block:"nearest"});}
+function openEventForm(prefillTitle){
+const opts=accounts.map(a=>`<option value="${a.id}">${esc(a.email)}</option>`).join("");
+const today=new Date().toISOString().slice(0,10);
+showSheet(`<h2>New event</h2><label class="help">Calendar (account)</label>
+<select id="eAcct">${opts}</select>
+<label class="help">Title</label><input id="eTitle" value="${esc(prefillTitle||"")}">
+<label class="help">Date</label><input id="eDate" type="date" value="${today}">
+<div class="row"><div style="flex:1"><label class="help">Start</label><input id="eStart" type="time" value="09:00"></div>
+<div style="flex:1"><label class="help">End</label><input id="eEnd" type="time" value="10:00"></div></div>
+<label class="help"><input type="checkbox" id="eAllDay" style="width:auto"> All-day</label>
+<label class="help">Notes</label><textarea id="eDesc" style="min-height:80px"></textarea>
+<div class="actions"><button class="act" onclick="saveEvent()">Save</button>
+<button class="ghost" onclick="closeSheet()">Cancel</button></div>`);}
+async function saveEvent(){
+const date=$("eDate").value,allDay=$("eAllDay").checked;
+const start=allDay?date:date+"T"+$("eStart").value+":00";
+const end=allDay?date:date+"T"+$("eEnd").value+":00";
+const d=await api("/api/calendar/events",{method:"POST",body:JSON.stringify({
+account_id:parseInt($("eAcct").value),title:$("eTitle").value,
+start:start,end:end,description:$("eDesc").value,all_day:allDay})});
+if(d.ok){closeSheet();renderCal();toast("Event added");}else toast(d.error||"Failed");}
+// ---- journal
+async function loadJournal(){
+const d=await api("/api/journal");if(d.__auth===false)return;
+journalEntries=d.entries||[];const list=$("journalList");list.innerHTML=
+journalEntries.length?"":"<p class='help'>No entries yet. Write your first one.</p>";
+journalEntries.forEach(e=>{const div=document.createElement("div");
+div.className="card jentry";
+div.innerHTML=`<div class="d">${esc(e.date)}</div><h3>${esc(e.title||"(untitled)")}</h3>
+<div class="help">${esc(e.body.slice(0,140))}${e.body.length>140?"…":""}</div>`+
+(e.email_refs||[]).map(r=>`<span class="tag">✉ ${esc(r.subject||"email")}</span>`).join("");
+div.onclick=()=>openJournalForm(null,e);list.appendChild(div);});
+}
+function openJournalForm(links,existing){
+pendingLinks=links||(existing?(existing.email_refs||[]):[]);
+const e=existing||{};
+const linkHtml=()=>pendingLinks.map((r,i)=>`<span class="tag">✉ ${esc(r.subject||"email")}
+<a href="#" style="color:var(--mut)" onclick="pendingLinks.splice(${i},1);refreshLinks();return false">✕</a></span>`).join("");
+window.refreshLinks=()=>{$("jLinks").innerHTML=linkHtml();};
+showSheet(`<h2>${e.id?"Edit entry":"New journal entry"}</h2>
+<label class="help">Date</label><input id="jDate" type="date" value="${esc(e.date||new Date().toISOString().slice(0,10))}">
+<label class="help">Title</label><input id="jTitle" value="${esc(e.title||"")}">
+<label class="help">Linked emails</label><div id="jLinks">${linkHtml()}</div>
+<textarea id="jBody" style="min-height:220px" placeholder="Write freely…">${esc(e.body||"")}</textarea>
+<div class="actions"><button class="act" onclick="saveJournal(${e.id||"null"})">Save</button>
+${e.id?`<button class="ghost" onclick="delJournal(${e.id})">Delete</button>`:""}
+<button class="ghost" onclick="closeSheet()">Cancel</button></div>`);}
+async function saveJournal(id){
+const payload={date:$("jDate").value,title:$("jTitle").value,body:$("jBody").value,email_refs:pendingLinks};
+const d=id?await api("/api/journal/"+id,{method:"PUT",body:JSON.stringify(payload)})
+:await api("/api/journal",{method:"POST",body:JSON.stringify(payload)});
+if(d.ok){closeSheet();loadJournal();toast("Saved");}else toast("Save failed");}
+async function delJournal(id){if(!confirm("Delete this entry?"))return;
+await api("/api/journal/"+id,{method:"DELETE"});closeSheet();loadJournal();}
+async function journalPrompt(){
+$("promptBox").classList.remove("hidden");$("promptBox").textContent="Thinking…";
+const d=await api("/api/journal/prompt",{method:"POST"});
+$("promptBox").textContent=d.prompt||d.error||"Failed";}
+// ---- init
+(async function(){const d=await api("/api/me");if(d.__auth===false)return;
+await loadAccounts();loadMail(true);
+if(location.hash==="#accounts")goTab("accounts");})();
+</script>
+</body></html>
